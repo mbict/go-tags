@@ -81,8 +81,8 @@ func (p *parser) Parse(tag string) (params []Param, err error) {
 
 func parseArguments(s *scanner.Scanner) ([]string, error) {
 	var args []string
-	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-
+	for {
+		tok := s.Scan()
 		if s.TokenText() == ")" {
 			//end of enclosure
 			break

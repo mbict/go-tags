@@ -102,7 +102,6 @@ var goodPathTests = []struct {
 }
 
 func (ms *ParserSuite) TestParse(c *C) {
-	//with default parser
 	for _, test := range goodPathTests {
 		result, err := tags.Parse(test.Tag)
 
@@ -112,14 +111,13 @@ func (ms *ParserSuite) TestParse(c *C) {
 }
 
 func (ms *ParserSuite) TestCustomParser(c *C) {
-	////self initialized parser
-	//parser := tags.NewParser("-")
-	//for _, test := range goodPathTests {
-	//	result, err := parser.Parse(test.Tag)
-	//
-	//	c.Assert(err, IsNil, Commentf("test failed gives error for `%s`", test.Description))
-	//	c.Assert(result, DeepEquals, test.Expected, Commentf("test failed for `%s`", test.Description))
-	//}
+	parser := tags.NewParser("-")
+	for _, test := range goodPathTests {
+		result, err := parser.Parse(test.Tag)
+
+		c.Assert(err, IsNil, Commentf("test failed gives error for `%s`", test.Description))
+		c.Assert(result, DeepEquals, test.Expected, Commentf("test failed for `%s`", test.Description))
+	}
 }
 
 var badPathTests = []struct {
@@ -159,11 +157,10 @@ var badPathTests = []struct {
 }
 
 func (ms *ParserSuite) TestParseFailingPatterns(c *C) {
+	for _, test := range badPathTests {
+		result, err := tags.Parse(test.Tag)
 
-	//for _, test := range badPathTests {
-	//	result, err := tags.Parse(test.Tag)
-	//
-	//	c.Assert(result, IsNil, Commentf("test failed should not give results for test `%s`", test.Description))
-	//	c.Assert(err, ErrorMatches, test.Expected)
-	//}
+		c.Assert(result, IsNil, Commentf("test failed should not give results for test `%s`", test.Description))
+		c.Assert(err, ErrorMatches, test.Expected)
+	}
 }
