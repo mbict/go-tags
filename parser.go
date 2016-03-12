@@ -8,11 +8,13 @@ import (
 	"text/scanner"
 )
 
+// Param stores a keyword and the arguments extracted from a parsed tag
 type Param struct {
-	Name   string
-	Values []string
+	Name string
+	Args []string
 }
 
+// Parser interface only exports parse interface
 type Parser interface {
 	Parse(tag string) ([]Param, error)
 }
@@ -39,49 +41,31 @@ func Parse(tag string) ([]Param, error) {
 
 // Parse parses the provided tag and returns a slice with the found parameter (keywords/value) pairs.
 // If the provided tag is empty or has the ignore identifier (custom defined) it will return a nil slice
-func (p *parser) Parse(tag string) ([]Param, error) {
+func (p *parser) Parse(tag string) (params []Param, err error) {
 	tag = strings.TrimSpace(tag)
 	if len(tag) == 0 || tag == p.ignoreKeyword {
 		return nil, nil
 	}
 
-	var params []Param = nil
 	var s scanner.Scanner
 	s.Init(strings.NewReader(tag))
 	s.Error = func(_ *scanner.Scanner, _ string) {}
 
-	var param *Param = nil
+	var param *Param
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
 		if param != nil && s.TokenText() == "(" {
-			//scan enclosure
-			for tok != scanner.EOF {
-				tok = s.Scan()
-				if s.TokenText() == ")" {
-					//end of enclosure
-					break
-				} else if tok == scanner.EOF {
-					return nil, errors.New("Unexpected EOF")
-				} else if s.TokenText() == "," {
-					//ignore it
-					continue
-				} else if s.TokenText() == ";" {
-					return nil, fmt.Errorf("Unexpected token `%s` expected a , or )", s.TokenText())
-				} else {
-					value, err := strconv.Unquote(s.TokenText())
-					if err != nil {
-						value = s.TokenText()
-					}
-					param.Values = append(param.Values, value)
-				}
+			args, err := parseArguments(&s)
+			if err != nil {
+				return nil, err
 			}
+			param.Args = args
+
 		} else if s.TokenText() == ";" || s.TokenText() == "," {
 			params = append(params, *param)
 			param = nil
-			continue
 		} else if param == nil {
 			param = &Param{
-				Name:   s.TokenText(),
-				Values: nil,
+				Name: s.TokenText(),
 			}
 		} else {
 			return nil, fmt.Errorf("Unexpected token `%s` expected a delimter ; or ,", s.TokenText())
@@ -93,4 +77,28 @@ func (p *parser) Parse(tag string) ([]Param, error) {
 	}
 
 	return params, nil
+}
+
+func parseArguments(s *scanner.Scanner) ([]string, error) {
+	var args []string
+	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
+
+		if s.TokenText() == ")" {
+			//end of enclosure
+			break
+		} else if tok == scanner.EOF {
+			return nil, errors.New("Unexpected EOF")
+		} else if s.TokenText() == "," {
+			//ignore it
+		} else if s.TokenText() == ";" {
+			return nil, fmt.Errorf("Unexpected token `%s` expected a , or )", s.TokenText())
+		} else {
+			if value, err := strconv.Unquote(s.TokenText()); err == nil {
+				args = append(args, value)
+			} else {
+				args = append(args, s.TokenText())
+			}
+		}
+	}
+	return args, nil
 }

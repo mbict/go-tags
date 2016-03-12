@@ -6,7 +6,7 @@
 Tags
 ====
 
-Tags is a simple string parser used for extracting keyword/params pairs from structure tags.
+Tags is a simple string parser used for extracting keyword/arguments pairs from structure tags.
 
 Why
 ===
@@ -22,7 +22,7 @@ Tags can parse a few formats
 tags.Parse(`required`)
 
 // outputs map
-// []Param{ Param{ Name: "required", Values:nil } 
+// []Param{ Param{ Name: "required", Args:nil } 
 ```
 
 #### Multiple keywords
@@ -33,8 +33,8 @@ tags.Parse(`required,email`)
 
 // outputs map
 // []Param{ 
-//    Param{ Name: "required", Values:nil },
-//    Param{ Name: "email", Values:nil },
+//    Param{ Name: "required", Args:nil },
+//    Param{ Name: "email", Args:nil },
 // }
 ```
 
@@ -45,8 +45,8 @@ tags.Parse(`between(10,20);in("foo", "bar", "foo bar")`)
 
 // outputs map
 // []Param{ 
-//    Param{ Name: "between", Values:[]string{"10", "20"} },
-//    Param{ Name: "in", Values:[]string{"foo", "bar", "foo bar"} },
+//    Param{ Name: "between", Args:[]string{"10", "20"} },
+//    Param{ Name: "in", Args:[]string{"foo", "bar", "foo bar"} },
 // }
 ```
 
@@ -60,5 +60,5 @@ tags.Parse(`-`)
 
 Error handling
 ==============
-When a misformed tag is provided the parse function will return a error with the reason why.
-This could be a unexepected end of string (EOF) or badly closed statements.
+When a malformed tag is provided the parse function will return a error with the reason why.
+This could be a unexpected end of string (EOF) or badly closed statements.
