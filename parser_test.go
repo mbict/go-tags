@@ -98,6 +98,12 @@ var goodPathTests = []struct {
 			tags.Param{Name: "in", Args: []string{"a", "b", "c"}},
 			tags.Param{Name: "between", Args: []string{"1", "2", "3"}},
 		},
+	}, {
+		Description: "escape test",
+		Tag:         `in("\\","\"","\d\"\t")`,
+		Expected: []tags.Param{
+			tags.Param{Name: "in", Args: []string{`\`, `"`, `\d"\t`}},
+		},
 	},
 }
 

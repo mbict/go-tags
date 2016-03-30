@@ -3,7 +3,6 @@ package tags
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"text/scanner"
 )
@@ -93,12 +92,28 @@ func parseArguments(s *scanner.Scanner) ([]string, error) {
 		} else if s.TokenText() == ";" {
 			return nil, fmt.Errorf("Unexpected token `%s` expected a , or )", s.TokenText())
 		} else {
-			if value, err := strconv.Unquote(s.TokenText()); err == nil {
-				args = append(args, value)
-			} else {
-				args = append(args, s.TokenText())
-			}
+			args = append(args, unescape(s.TokenText()))
 		}
+
 	}
 	return args, nil
+}
+
+// unescape only removes the escape character from a
+// - double escaped backslash (\\) to (\)
+// - escaped quotes (\") to (")
+func unescape(in string) string {
+
+	in = strings.TrimSpace(in)
+	l := len(in)
+	if l < 2 {
+		return in
+	}
+
+	if in[0] != '"' || in[l-1] != '"' {
+		return in
+	}
+
+	in = strings.Replace(in[1:l-1], `\\`, `\`, -1)
+	return strings.Replace(in, `\"`, `"`, -1)
 }
