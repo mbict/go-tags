@@ -15,7 +15,10 @@ type Param struct {
 
 // Parser interface only exports parse interface
 type Parser interface {
+	//Parse will parse a tag and returns the params in order
 	Parse(tag string) ([]Param, error)
+	//ParseMao will parse a tag and will return an unordered map
+	ParseMap(tag string) (map[string][]string, error)
 }
 
 type parser struct {
@@ -32,50 +35,94 @@ func NewParser(ignoreKeyword string) Parser {
 }
 
 // Parse parses the provided tag and returns a slice with the found parameter (keywords/value) pairs.
-// If the provided tag is empty or has the ignore identifier "-" it will return a nil slice
-// The default default tag parser is used.
+// If the provided tag has the ignore identifier ("-") it will return a nil slice
+// If the provided tag is empty it will return a empty slice
 func Parse(tag string) ([]Param, error) {
 	return defaultParser.Parse(tag)
 }
 
+// ParseMap parses the provided tag and returns a map with the found parameters.
+// If the provided tag has the ignore identifier ("-") it will return a nil map
+// If the provided tag is empty it will return an empty map
+func ParseMap(tag string) (map[string][]string, error) {
+	return defaultParser.ParseMap(tag)
+}
+
 // Parse parses the provided tag and returns a slice with the found parameter (keywords/value) pairs.
-// If the provided tag is empty or has the ignore identifier (custom defined) it will return a nil slice
+// If the provided tag has the ignore identifier (custom defined) it will return a nil slice
+// If the provided tag is empty it will return a empty slice
 func (p *parser) Parse(tag string) (params []Param, err error) {
 	tag = strings.TrimSpace(tag)
-	if len(tag) == 0 || tag == p.ignoreKeyword {
+	if tag == p.ignoreKeyword {
 		return nil, nil
 	}
 
+	params = []Param{}
+	paramReadFunc := func(name string, args []string) {
+		param := Param{
+			Name: name,
+			Args: args,
+		}
+		params = append(params, param)
+	}
+	if err := parseTag(tag, paramReadFunc); err != nil {
+		return nil, err
+	}
+	return params, nil
+}
+
+// ParseMap parses the provided tag and returns a map with the found parameters.
+// If the provided tag has the ignore identifier (custom defined) it will return a nil map
+// If the provided tag is empty it will return an empty map
+func (p *parser) ParseMap(tag string) (map[string][]string, error) {
+	tag = strings.TrimSpace(tag)
+	if tag == p.ignoreKeyword {
+		return nil, nil
+	}
+
+	params := make(map[string][]string)
+	paramReadFunc := func(name string, args []string) {
+		params[name] = args
+	}
+	if err := parseTag(tag, paramReadFunc); err != nil {
+		return nil, err
+	}
+	return params, nil
+}
+
+type paramReadFunc func(name string, args []string)
+
+func parseTag(tag string, paramReadFn paramReadFunc) error {
 	var s scanner.Scanner
 	s.Init(strings.NewReader(tag))
 	s.Error = func(_ *scanner.Scanner, _ string) {}
 
-	var param *Param
+	var (
+		err  error
+		name string
+		args []string
+	)
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		if param != nil && s.TokenText() == "(" {
-			args, err := parseArguments(&s)
+		if name != "" && s.TokenText() == "(" {
+			args, err = parseArguments(&s)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			param.Args = args
-
 		} else if s.TokenText() == ";" || s.TokenText() == "," {
-			params = append(params, *param)
-			param = nil
-		} else if param == nil {
-			param = &Param{
-				Name: s.TokenText(),
-			}
+			paramReadFn(name, args)
+			name = ""
+			args = []string{}
+		} else if name == "" {
+			name = s.TokenText()
 		} else {
-			return nil, fmt.Errorf("Unexpected token `%s` expected a delimter ; or ,", s.TokenText())
+			return fmt.Errorf("Unexpected token `%s` expected a delimter ; or ,", s.TokenText())
 		}
 	}
 
-	if param != nil {
-		return append(params, *param), nil
+	if name != "" {
+		paramReadFn(name, args)
 	}
-
-	return params, nil
+	return nil
 }
 
 func parseArguments(s *scanner.Scanner) ([]string, error) {
