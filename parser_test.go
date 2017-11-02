@@ -22,7 +22,7 @@ var goodPathTests = []struct {
 	{
 		Description: "empty tag",
 		Tag:         ``,
-		Expected:    nil,
+		Expected:    []tags.Param{},
 	}, {
 		Description: "ignored tag",
 		Tag:         `-`,
@@ -116,6 +116,25 @@ func (ms *ParserSuite) TestParse(c *C) {
 	}
 }
 
+func (ms *ParserSuite) TestParseMap(c *C) {
+	for _, test := range goodPathTests {
+		result, err := tags.ParseMap(test.Tag)
+
+		c.Assert(err, IsNil, Commentf("test failed gives error for `%s`", test.Description))
+		if test.Expected == nil {
+			c.Assert(result, IsNil, Commentf("test failed for `%s`", test.Description))
+		} else {
+			c.Assert(result, HasLen, len(test.Expected), Commentf("test failed for `%s`", test.Description))
+			for _, param := range test.Expected {
+				v, hasKey := result[param.Name]
+				c.Assert(hasKey, Equals, true, Commentf("test failed for `%s`", test.Description))
+				c.Assert(v, DeepEquals, param.Args, Commentf("test failed for `%s`", test.Description))
+			}
+		}
+
+	}
+}
+
 func (ms *ParserSuite) TestCustomParser(c *C) {
 	parser := tags.NewParser("-")
 	for _, test := range goodPathTests {
@@ -155,16 +174,21 @@ var badPathTests = []struct {
 		Description: "Unexpected token when the current opened parenthesis is not closed",
 		Tag:         "min(;",
 		Expected:    "Unexpected token `\\;` expected a \\, or \\)",
-	}, {
-		Description: "",
-		Tag:         "min(;",
-		Expected:    "Unexpected token `\\;` expected a \\, or \\)",
 	},
 }
 
 func (ms *ParserSuite) TestParseFailingPatterns(c *C) {
 	for _, test := range badPathTests {
 		result, err := tags.Parse(test.Tag)
+
+		c.Assert(result, IsNil, Commentf("test failed should not give results for test `%s`", test.Description))
+		c.Assert(err, ErrorMatches, test.Expected)
+	}
+}
+
+func (ms *ParserSuite) TestParseMapFailingPatterns(c *C) {
+	for _, test := range badPathTests {
+		result, err := tags.ParseMap(test.Tag)
 
 		c.Assert(result, IsNil, Commentf("test failed should not give results for test `%s`", test.Description))
 		c.Assert(err, ErrorMatches, test.Expected)
